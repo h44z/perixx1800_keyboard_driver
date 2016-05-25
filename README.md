@@ -1,21 +1,13 @@
-# Linux Microdia Keyboard Chipset Driver #
+# Linux Microdia Keyboard (Perixx PX-1800) Chipset Driver #
 
 For Chipset `0x0c45`:`0x7603`
 The kernel reports the chipset as `Microdia`
 
 Written for the Perixx PX-1800 USB Keyboard: [Perixx PX-1800 Keyboard](http://www.perixx.com/en/service/Perixx_Manual/GAMING/PX-1800.pdf)
+
 Original base: swoogan.blogspot.de/2014/09/azio-l70-keyboard-linux-driver.html
 
-> NOTE: Makefile and instructions are only tested on Ubuntu, however they are known to work on Debian, Arch, Fedora, and Manjaro.
-
-Reportedy supports the following keyboards as well:
-
- * SL-6432-BK - Speedlink LUCIDIS Comfort Illuminated Keyboard
- * COUGAR 200K Scissor Gaming Keyboard
- * GAMDIAS USB Keyboard (unspecified model but will report as Microdia chipset)
- * Avazz USB Keyboard (unspecified model but will report as Microdia chipset)
- * Perixx P1800
- * Modecom MC800-Volcano
+> NOTE: Makefile and instructions are only tested on Ubuntu 16.04.
 
 # Installation ##
 ## DKMS ##

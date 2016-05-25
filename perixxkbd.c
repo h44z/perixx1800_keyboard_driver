@@ -3,6 +3,8 @@
  *  Copyright (c) 2016 Christoph Haas
  *
  *  Perixx PX-1800 USB Keyboard support
+ *
+ *  Original work: https://bitbucket.org/Swoogan/aziokbd
  */
 
 /*
@@ -387,7 +389,7 @@ static int usb_kbd_probe(struct usb_interface *iface,
 			 le16_to_cpu(dev->descriptor.idVendor),
 			 le16_to_cpu(dev->descriptor.idProduct));
 		
-	printk("<1>aziokbd: detected %s\n", kbd->name);
+	printk("<1>perixxkbd: detected %s\n", kbd->name);
 
 	usb_make_path(dev, kbd->phys, sizeof(kbd->phys));
 	strlcat(kbd->phys, "/input0", sizeof(kbd->phys));

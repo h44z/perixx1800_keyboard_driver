@@ -36,6 +36,7 @@ if (lsmod | grep 'usbhid'); then
 
     echo '## Attempting to reload usbhid module ##'
     rmmod usbhid && modprobe usbhid quirks=$quirk
+    echo '## Reload done. Please reboot if the keyboard is not working yet! ##'
 else
     echo '## usbhid is compiled into kernel ##'
 
