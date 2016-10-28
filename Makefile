@@ -8,9 +8,9 @@ MODULE_NAME := perixxkbd
 MODULE_VER := 1.0.0
 
 ifeq ($(DEBUG),y)
-        DBGFLAGS = -O -g -DML_DEBUG
+        DBGFLAGS = -O -g -DML_DEBUG -Wall -Wextra
 else
-        DBGFLAGS = -O2
+        DBGFLAGS = -O2 -Wall
 endif
 
 ccflags-y += $(DBGFLAGS)

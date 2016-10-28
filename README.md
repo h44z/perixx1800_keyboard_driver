@@ -7,29 +7,33 @@ Written for the Perixx PX-1800 USB Keyboard: [Perixx PX-1800 Keyboard](http://ww
 
 Original base: swoogan.blogspot.de/2014/09/azio-l70-keyboard-linux-driver.html
 
-> NOTE: Makefile and instructions are only tested on Ubuntu 16.04.
+> NOTE: Makefile and instructions are only tested on Ubuntu 16.04 and Archlinux 2016.10 (Kernel 4.8.4)
 
 # Installation ##
 ## DKMS ##
 
     # debian-based:
-    sudo apt-get install mercurial build-essential linux-headers-generic dkms
+    sudo apt-get install git build-essential linux-headers-generic dkms
     
     # fedora:
-    sudo dnf install kernel-devel kernel-headers
+    sudo dnf install git kernel-devel kernel-headers
     sudo dnf groupinstall "Development Tools" "Development Libraries"
+
+    # arch:
+    sudo pacman -S git base-devel linux-headers dkms
     
-    hg clone https://bitbucket.org/Swoogan/aziokbd
-    cd aziokbd
+    # on all platforms:
+    git clone https://git.sprinternet.at/h44z/perixx1800keyboard.git
+    cd perixx1800keyboard
     sudo ./install.sh dkms
-    
     
 
 ## Manual Install ##
 
-    sudo apt-get install mercurial build-essential linux-headers-generic
-    hg clone https://bitbucket.org/Swoogan/aziokbd
-    cd aziokbd
+    # Dependencies:
+    git build-essential linux-headers dkms
+    git clone https://git.sprinternet.at/h44z/perixx1800keyboard.git
+    cd perixx1800keyboard
     sudo ./install.sh
 
 # Blacklisting #
@@ -56,7 +60,7 @@ If you find that the generic USB driver is still taking the device, try changing
 ## Compiled into Kernel ##
 If the generic USB hid driver is compiled into the kernel, then the driver is not loaded as a module and setting the option via `modprobe` will not work. In this case you must pass the option to the driver via the grub boot loader.
 
-Create a new file in `/etc/default/grub.d/`. For example, you might call it `aziokbd.conf`. (If your grub package doesn't have this directory, just modify the generic `/etc/default/grub` configuration file):
+Create a new file in `/etc/default/grub.d/`. For example, you might call it `perixx1800keyboard.conf`. (If your grub package doesn't have this directory, just modify the generic `/etc/default/grub` configuration file):
 
     GRUB_CMDLINE_LINUX_DEFAULT='usbhid.quirks=0x0c45:0x7603:0x4'
 

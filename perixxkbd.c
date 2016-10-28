@@ -114,7 +114,6 @@ static void usb_kbd_irq(struct urb *urb)
 {
 	struct usb_kbd *kbd = urb->context;
 	int i, j, offset;
-	char keys[9];
 	
 	switch (urb->status) {
 	case 0:			/* success */
