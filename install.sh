@@ -6,12 +6,29 @@ if [[ $1 != 'dkms' ]]; then
 
     echo '## Installing package ##'
     make install
+
+    if [[ $1 -ne 4 ]]; then
+        quirk='0x0c45:0x7603:0x0007'
+        echo '## Quirk set to 0007 ##'
+    else
+        quirk='0x0c45:0x7603:0x0004'
+        echo '## Quirk set to 0004 ##'
+    fi
 else
     echo '## Installing package with DKMS ##'
     make dkms
+
+    if [[ $2 -ne 4 ]]; then
+        quirk='0x0c45:0x7603:0x0007'
+        echo '## Quirk set to 0007 ##'
+    else
+        quirk='0x0c45:0x7603:0x0004'
+        echo '## Quirk set to 0004 ##'
+    fi
 fi
 
-quirk='0x0c45:0x7603:0x0007'
+
+
 modquirk="options usbhid quirks=$quirk"
 grubquirk="usbhid.quirks=$quirk"
 
@@ -37,6 +54,7 @@ if (lsmod | grep 'usbhid'); then
     echo '## Attempting to reload usbhid module ##'
     rmmod usbhid && modprobe usbhid quirks=$quirk
     echo '## Reload done. Please reboot if the keyboard is not working yet! ##'
+    echo '## If the keyboard does not work after reboot, try reinstalling the script with ./install.sh [dkms] 4 ##'
 else
     echo '## usbhid is compiled into kernel ##'
 
@@ -59,5 +77,14 @@ else
     fi
 
     echo '## You must reboot to load the module ##'
+    echo '## If the keyboard does not work after reboot, try reinstalling the script with ./install.sh [dkms] 4 ##'
 fi 
 
+if [ -f /etc/mkinitcpio.conf ]; then
+    echo '## Enabling module in initramfs ##'
+    
+    if ! (cat /etc/mkinitcpio.conf | grep "perixxkbd"); then
+        sed -i 's|^MODULES="|MODULES="perixxkbd |g' /etc/mkinitcpio.conf
+    fi
+    mkinitcpio -p linux
+fi

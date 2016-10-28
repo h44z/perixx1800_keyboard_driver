@@ -5,7 +5,7 @@ The kernel reports the chipset as `Microdia`
 
 Written for the Perixx PX-1800 USB Keyboard: [Perixx PX-1800 Keyboard](http://www.perixx.com/en/service/Perixx_Manual/GAMING/PX-1800.pdf)
 
-Original base: swoogan.blogspot.de/2014/09/azio-l70-keyboard-linux-driver.html
+Original base: http://swoogan.blogspot.de/2014/09/azio-l70-keyboard-linux-driver.html, https://bitbucket.org/Swoogan/aziokbd
 
 > NOTE: Makefile and instructions are only tested on Ubuntu 16.04 and Archlinux 2016.10 (Kernel 4.8.4)
 
@@ -40,7 +40,7 @@ Original base: swoogan.blogspot.de/2014/09/azio-l70-keyboard-linux-driver.html
 
 **NOTE: install.sh attempts to blacklist the driver for you. You shouldn't need to do anything manually. These instructions are to explain the process, in the event something goes wrong.**
 
-You need to blacklist the device from the generic USB hid driver in order for the aziokbd driver to control it.
+You need to blacklist the device from the generic USB hid driver in order for the perixxkbd driver to control it.
 
 ## Kernel Module ##
 If the USB hid driver is compiled as a kernel module you will need to create a quirks file and blacklist it there.
@@ -67,4 +67,10 @@ Create a new file in `/etc/default/grub.d/`. For example, you might call it `per
 Then run `sudo update-grub` and reboot.
 
 Again, if you find that `0x4` doesn't work, try `0x7`.
+
+
+## Add to initramfs ##
+On Archlinux the module has to be added to `/etc/mkinitcpio.conf`. Otherwise usbhid will fetch the keyboard before perixxkbd is loaded.
+
+Therefor add "perixxkbd" to the MODULES section and rebuild the initramfs with `sudo mkinitcpio -p linux`
 

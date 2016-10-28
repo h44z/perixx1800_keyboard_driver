@@ -48,7 +48,7 @@ dkms:  clean
 	rm -rf /usr/src/$(MODULE_NAME)-$(MODULE_VER)
 	mkdir /usr/src/$(MODULE_NAME)-$(MODULE_VER) -p
 	cp . /usr/src/$(MODULE_NAME)-$(MODULE_VER) -a
-	rm -rf /usr/src/$(MODULE_NAME)-$(MODULE_VER)/.hg
+	rm -rf /usr/src/$(MODULE_NAME)-$(MODULE_VER)/.git
 	$(REMOVE_MODULE)
 	dkms add -m $(MODULE_NAME) -v $(MODULE_VER)
 	dkms build -m $(MODULE_NAME) -v $(MODULE_VER)
