@@ -9,7 +9,13 @@ Original base: http://swoogan.blogspot.de/2014/09/azio-l70-keyboard-linux-driver
 
 > NOTE: Makefile and instructions are only tested on Ubuntu 16.04 and Archlinux 2016.10 (Kernel 4.8.4)
 
-# Installation ##
+
+# Building in Qt Creator #
+In the Qt Creator go to the "Projects" and unset the "Shadow build"
+In the "Build Steps" remove all items and add "make" item. In the make item in the first field set make, in the second field set command (default) for your Makefile.
+Also you can set your build script.
+
+# Installation #
 ## DKMS ##
 
     # debian-based:
