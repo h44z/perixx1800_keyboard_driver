@@ -149,6 +149,9 @@ struct usb_kbd {
 	unsigned char *leds;
 	dma_addr_t new_dma;
 	dma_addr_t leds_dma;
+
+	spinlock_t leds_lock;
+	bool led_urb_submitted;
 };
 
 static void usb_kbd_irq(struct urb *urb)
@@ -315,47 +318,66 @@ resubmit:
 
 static int usb_kbd_event(struct input_dev *dev, unsigned int type, unsigned int code, int value)
 {
+	unsigned long flags;
 	struct usb_kbd *kbd = input_get_drvdata(dev);
 
 	if (type != EV_LED)
 		return -1;
 
+	spin_lock_irqsave(&kbd->leds_lock, flags);
 	kbd->newleds = (!!test_bit(LED_KANA,    dev->led) << 3) |
-			(!!test_bit(LED_COMPOSE, dev->led) << 3) |
-			(!!test_bit(LED_SCROLLL, dev->led) << 2) |
-			(!!test_bit(LED_CAPSL,   dev->led) << 1) |
-			(!!test_bit(LED_NUML,    dev->led));
+				   (!!test_bit(LED_COMPOSE, dev->led) << 3) |
+				   (!!test_bit(LED_SCROLLL, dev->led) << 2) |
+				   (!!test_bit(LED_CAPSL,   dev->led) << 1) |
+				   (!!test_bit(LED_NUML,    dev->led));
 
-	if (kbd->led->status == -EINPROGRESS)
+	if (kbd->led_urb_submitted){
+		spin_unlock_irqrestore(&kbd->leds_lock, flags);
 		return 0;
+	}
 
-	if (*(kbd->leds) == kbd->newleds)
+	if (*(kbd->leds) == kbd->newleds){
+		spin_unlock_irqrestore(&kbd->leds_lock, flags);
 		return 0;
+	}
 
 	*(kbd->leds) = kbd->newleds;
+
 	kbd->led->dev = kbd->usbdev;
 	if (usb_submit_urb(kbd->led, GFP_ATOMIC))
 		pr_err("usb_submit_urb(leds) failed\n");
+	else
+		kbd->led_urb_submitted = true;
+
+	spin_unlock_irqrestore(&kbd->leds_lock, flags);
 
 	return 0;
 }
 
 static void usb_kbd_led(struct urb *urb)
 {
+	unsigned long flags;
 	struct usb_kbd *kbd = urb->context;
 
 	if (urb->status)
-		hid_warn(urb->dev, "led urb status %d received\n",
-				 urb->status);
+		hid_warn(urb->dev, "led urb status %d received\n", urb->status);
 
-	if (*(kbd->leds) == kbd->newleds)
+	spin_lock_irqsave(&kbd->leds_lock, flags);
+
+	if (*(kbd->leds) == kbd->newleds){
+		kbd->led_urb_submitted = false;
+		spin_unlock_irqrestore(&kbd->leds_lock, flags);
 		return;
+	}
 
 	*(kbd->leds) = kbd->newleds;
-	kbd->led->dev = kbd->usbdev;
 
-	if (usb_submit_urb(kbd->led, GFP_ATOMIC))
+	kbd->led->dev = kbd->usbdev;
+	if (usb_submit_urb(kbd->led, GFP_ATOMIC)){
 		hid_err(urb->dev, "usb_submit_urb(leds) failed\n");
+		kbd->led_urb_submitted = false;
+	}
+	spin_unlock_irqrestore(&kbd->leds_lock, flags);
 }
 
 static int usb_kbd_open(struct input_dev *dev)
@@ -378,20 +400,15 @@ static void usb_kbd_close(struct input_dev *dev)
 
 static int usb_kbd_alloc_mem(struct usb_device *dev, struct usb_kbd *kbd)
 {
-	kbd->irq = usb_alloc_urb(0, GFP_KERNEL);
-	if (!kbd->irq)
+	if (!(kbd->irq = usb_alloc_urb(0, GFP_KERNEL)))
 		return -1;
-	kbd->led = usb_alloc_urb(0, GFP_KERNEL);
-	if (!kbd->led)
+	if (!(kbd->led = usb_alloc_urb(0, GFP_KERNEL)))
 		return -1;
-	kbd->new = usb_alloc_coherent(dev, 8, GFP_ATOMIC, &kbd->new_dma);
-	if (!kbd->new)
+	if (!(kbd->new = usb_alloc_coherent(dev, 8, GFP_ATOMIC, &kbd->new_dma)))
 		return -1;
-	kbd->cr = kmalloc(sizeof(struct usb_ctrlrequest), GFP_KERNEL);
-	if (!kbd->cr)
+	if (!(kbd->cr = kmalloc(sizeof(struct usb_ctrlrequest), GFP_KERNEL)))
 		return -1;
-	kbd->leds = usb_alloc_coherent(dev, 1, GFP_ATOMIC, &kbd->leds_dma);
-	if (!kbd->leds)
+	if (!(kbd->leds = usb_alloc_coherent(dev, 1, GFP_ATOMIC, &kbd->leds_dma)))
 		return -1;
 
 	return 0;
@@ -427,6 +444,7 @@ static int usb_kbd_probe(struct usb_interface *iface, const struct usb_device_id
 
 	pipe = usb_rcvintpipe(dev, endpoint->bEndpointAddress);
 	maxp = usb_maxpacket(dev, pipe, usb_pipeout(pipe));
+
 	kbd = kzalloc(sizeof(struct usb_kbd), GFP_KERNEL);
 	input_dev = input_allocate_device();
 	if (!kbd || !input_dev)
@@ -437,6 +455,7 @@ static int usb_kbd_probe(struct usb_interface *iface, const struct usb_device_id
 
 	kbd->usbdev = dev;
 	kbd->dev = input_dev;
+	spin_lock_init(&kbd->leds_lock);
 
 	if (dev->manufacturer)
 		strlcpy(kbd->name, dev->manufacturer, sizeof(kbd->name));
@@ -453,7 +472,7 @@ static int usb_kbd_probe(struct usb_interface *iface, const struct usb_device_id
 				 le16_to_cpu(dev->descriptor.idVendor),
 				 le16_to_cpu(dev->descriptor.idProduct));
 
-	printk("<1>perixxkbd: detected %s\n", kbd->name);
+	printk("perixxkbd: detected %s\n", kbd->name);
 
 	usb_make_path(dev, kbd->phys, sizeof(kbd->phys));
 	strlcat(kbd->phys, "/input0", sizeof(kbd->phys));
@@ -473,7 +492,6 @@ static int usb_kbd_probe(struct usb_interface *iface, const struct usb_device_id
 
 	for (i = 0; i < 255; i++)
 		set_bit(px_kbd_keycode[i], input_dev->keybit);
-
 	clear_bit(0, input_dev->keybit);
 
 	input_dev->event = usb_kbd_event;
@@ -490,7 +508,6 @@ static int usb_kbd_probe(struct usb_interface *iface, const struct usb_device_id
 	kbd->cr->bRequest = 0x09;
 	kbd->cr->wValue = cpu_to_le16(0x200);
 	kbd->cr->wIndex = cpu_to_le16(interface->desc.bInterfaceNumber);
-	//kbd->cr->wIndex = cpu_to_le16(0);
 	kbd->cr->wLength = cpu_to_le16(1);
 
 	usb_fill_control_urb(kbd->led, dev, usb_sndctrlpipe(dev, 0),
@@ -523,6 +540,7 @@ static void usb_kbd_disconnect(struct usb_interface *intf)
 	if (kbd) {
 		usb_kill_urb(kbd->irq);
 		input_unregister_device(kbd->dev);
+		usb_kill_urb(kbd->led);
 		usb_kbd_free_mem(interface_to_usbdev(intf), kbd);
 		kfree(kbd);
 	}
@@ -530,6 +548,8 @@ static void usb_kbd_disconnect(struct usb_interface *intf)
 
 static struct usb_device_id usb_kbd_id_table [] = {
 	{ USB_DEVICE(ML_VENDOR_ID, ML_PRODUCT_ID) },
+	{ USB_INTERFACE_INFO(USB_INTERFACE_CLASS_HID, USB_INTERFACE_SUBCLASS_BOOT,
+		USB_INTERFACE_PROTOCOL_KEYBOARD) },
 	{ } /* Terminating entry */
 };
 
@@ -547,8 +567,9 @@ static int __init usb_kbd_init(void)
 	int result = usb_register(&usb_kbd_driver);
 
 	if (result == 0)
-		printk(KERN_INFO KBUILD_MODNAME ": " DRIVER_VERSION ":"
-			DRIVER_DESC "\n");
+		printk("perixxkbd: usb_register success\n");
+	else
+		printk("perixxkbd: usb_register failure\n");
 
 	return result;
 }
