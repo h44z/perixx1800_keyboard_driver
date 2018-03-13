@@ -8,3 +8,4 @@ CMakeLists.txt
 Module.symvers
 modules.order
 perixxkbd.mod.c
+perixx1800keyboard.pro.user
