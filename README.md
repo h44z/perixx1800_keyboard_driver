@@ -80,3 +80,10 @@ On Archlinux the module has to be added to `/etc/mkinitcpio.conf`. Otherwise usb
 
 Therefor add "perixxkbd" to the MODULES section and rebuild the initramfs with `sudo mkinitcpio -p linux`
 
+## Add a UDEV rule
+If none of the above works and usbhid takes control over the keyboard, add a custom udev rule to manually rebind the driver.
+
+Create a new file `/etc/udev/rules.d/10-perixxkbd.rules`:
+```
+ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="7603", MODE="0666", PROGRAM="/bin/sh -c 'echo -n $id:1.1 >/sys/bus/usb/drivers/usbhid/unbind;echo -n $id:1.1 >/sys/bus/usb/drivers/perixxkbd/bind'"
+```
